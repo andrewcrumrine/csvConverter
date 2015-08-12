@@ -377,3 +377,12 @@ class CSVCreator(object):
 			quantity = float(s.removeCommas(self.__iterText(self.header[5])))
 			price = float(s.removeCommas(self.__iterText(self.header[7])))
 			self.rate = str(round(price / quantity,self.SIG_FIGS))
+
+	def getText(self,textIn):
+		self.__iterText(textIn)
+
+	def getHeaderAndIndicies(self):
+		"""
+		Returns header and indicies to extended class
+		"""
+		return (self.header,self.indicies)
