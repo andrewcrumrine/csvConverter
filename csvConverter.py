@@ -44,13 +44,13 @@ class TxtFileReader():
 	There is no more text to be read.
 		"""
 		self.buffer = TxtBuffer(self.fid)
-		self.setReading()
-		self.updateHeader()
+		self.__setReading()
+		self.__updateHeader()
 		if self.buffer.returnLine and self.header == False:
 			return self.buffer
 		return None
 
-	def updateHeader(self):
+	def __updateHeader(self):
 		"""
 	This method manages the header instance variable based off of what's
 	passed from the TxtBuffer object.
@@ -61,7 +61,7 @@ class TxtFileReader():
 			if self.buffer.header == False and self.header == True:
 				self.header = False
 
-	def setReading(self):
+	def __setReading(self):
 		"""
 	This method sets the reading method to false if there are no more
 	lines of text read from the file.
@@ -83,21 +83,23 @@ class TxtBuffer():
 		"""
 		self.HEADER_KEY_START = ' */**/15'
 		self.HEADER_KEY_STOP = '------'
-		self.TOTAL_KEY = '*\r\r\n'
+		self.TOTAL_KEY_1 = '*\r\r\n'
+		self.TOTAL_KEY_2 = '*\r\n'
+		self.TOTAL_KEY_3 = '*\n'
 		self.text = fid.readline()
 		self.size = len(self.text)
 		self.header = None
-		self.returnLine = self.checkReturnLine()
+		self.returnLine = self.__checkReturnLine()
 
-	def checkReturnLine(self):
+	def __checkReturnLine(self):
 		"""
 	This method screens the string output for undesirable strings
 		"""
-		if self.isHeader() or self.isBlankLine() or self.isTotalLine():
+		if self.__isHeader() or self.__isBlankLine() or self.__isTotalLine():
 			return False
 		return True
 
-	def isBlankLine(self):
+	def __isBlankLine(self):
 		"""
 	This method checks the read screen for a blank line.
 		"""
@@ -105,27 +107,29 @@ class TxtBuffer():
 			return True
 		return False
 
-	def isHeader(self):
+	def __isHeader(self):
 		"""
 	This method checks the read line to see if it's a header.
 		"""
-		if self.isSpecialLine(self.HEADER_KEY_START,0,'*') :
+		if self.__isSpecialLine(self.HEADER_KEY_START,0,'*') :
 			self.header = True
 			return True
-		if self.isSpecialLine(self.HEADER_KEY_STOP,0) :
+		if self.__isSpecialLine(self.HEADER_KEY_STOP,0) :
 			self.header = False
 			return True
 		return False
 
-	def isTotalLine(self):
+	def __isTotalLine(self):
 		"""
 	This method screens for any totals lines produced by the report.
 		"""
-		if self.isSpecialLine(self.TOTAL_KEY,self.size - len(self.TOTAL_KEY)) :
+		if self.__isSpecialLine(self.TOTAL_KEY_1,self.size - len(self.TOTAL_KEY_1)) \
+		or self.__isSpecialLine(self.TOTAL_KEY_2,self.size - len(self.TOTAL_KEY_2)) \
+		or self.__isSpecialLine(self.TOTAL_KEY_3,self.size - len(self.TOTAL_KEY_3)):
 			return True
 		return False
 
-	def isSpecialLine(self,key,loc,wc=None):
+	def __isSpecialLine(self,key,loc,wc=None):
 		"""
 	This method is a general method that returns a boolean if the text you're
 	looking for is where you expect it to be.
@@ -160,6 +164,7 @@ class CSVCreator(object):
 		self.customer = ''
 		self.itemID = ''
 		self.item = ''
+		self.total = None
 
 		self.header = ['Customer ID', 'Customer Name', 'Item ID', \
 			'Item Description', 'Date','Quantity','Rate', 'Price',\
@@ -310,6 +315,7 @@ class CSVCreator(object):
 		if customerID.find(' ') == -1:
 			self.customerID = customerID
 			return True
+		self.__clearCustomer()
 		return False
 
 	def __setCustomer(self):
@@ -348,3 +354,7 @@ class CSVCreator(object):
 		if self.__iterText('Quantity').find('-') >= 0:
 			return True
 		return False
+
+	def __clearCustomer(self):
+		self.customer = ''
+		self.customerID	= ''
