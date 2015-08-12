@@ -357,7 +357,7 @@ class CSVCreator(object):
 	This method checks the quantity field to make sure the transaction is
 	a sale.  If not, it returns false.
 		"""
-		if self.__iterText('Quantity').find('-') >= 0:
+		if self.__iterText(self.header[5]).find('-') >= 0:
 			return True
 		return False
 
@@ -373,7 +373,7 @@ class CSVCreator(object):
 		Calculates the rate to a higher percision of digits so the original value can 
 		be overwritten.
 		"""
-		self.rate = float(self.__iterText(self.header[7])) / float(self.__iterText(self.\
-			header[5]))
-
-		self.rate = str(round(self.rate,self.SIG_FIGS))
+		if not self.__isCredit():
+			quantity = float(self.__iterText(self.header[5]))
+			price = float(s.removeCommas(self.__iterText(self.header[7])))
+			self.rate = str(round(price / quantity,self.SIG_FIGS))
