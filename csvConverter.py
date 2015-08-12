@@ -8,8 +8,6 @@
 
 """
 
-import stringMan as s
-
 class TxtFileReader():
 	"""
 	This object manages opening the incoming text file, creating a TxtBuffer
@@ -153,7 +151,7 @@ class CSVCreator(object):
 	the data into the required fields.
 	"""
 
-	def __init__(self,filenameIn):
+	def __init__(self,filenameIn=None):
 		"""
 	This initializes the CSVCreator object.  It sets the header titles,
 	defines the locations on a given line where the specific fields are,
@@ -168,6 +166,10 @@ class CSVCreator(object):
 		self.total = None
 		self.totalSum = 0
 		self.rate = 0
+		self.fileIn = filenameIn
+		self.fileOut = None
+		self.text = ''
+		self.fid = None
 
 		self.header = ['Customer ID', 'Customer Name', 'Item ID', \
 			'Item Description', 'Date','Quantity','Rate', 'Price',\
@@ -177,17 +179,24 @@ class CSVCreator(object):
 			self.header[2]:[44,60], self.header[3]:[60,86], self.header[4]:\
 			[101,110], self.header[5]:[110,135], self.header[6]:[160,171],\
 			self.header[7]:[171,185]}
-		self.fileOut = self.__getFilenameOut(filenameIn)
-		self.text = ''
-		if self.__isCSV() :
-			self.fid = open(self.fileOut,'w')
-			self.__createHeader()
+
 
 	def __del__(self):
 		"""
 	This method runs when the object is destroyed.  It closes the file.
 		"""
-		self.fid.close()
+		if fid is not None:
+			self.fid.close()
+
+	def createCSV(self):
+		"""
+		Copies the filename in and generates a csv.  Completes after creating a header
+		"""
+		self.fileOut = self.__getFilenameOut(self.fileIn)
+		self.text = ''
+		if self.__isCSV() :
+			self.fid = open(self.fileOut,'w')
+			self.__createHeader()
 
 
 	def __getFilenameOut(self,filenameIn):
@@ -381,8 +390,14 @@ class CSVCreator(object):
 	def getText(self,textIn):
 		self.__iterText(textIn)
 
-	def getHeaderAndIndicies(self):
+class SalesOrder(CSVCreator):
+	"""
+		Builds a sales order from a series of itemized lines inputed from the 
+	CSVCreator object.  The intent of the class is to output a sum total.
+	"""
+	def __init__(self,textIn):
 		"""
-		Returns header and indicies to extended class
+	Input the first line into the text list.
 		"""
-		return (self.header,self.indicies)
+		self.text = [textIn]
+		CSVCreator.__init__(self)

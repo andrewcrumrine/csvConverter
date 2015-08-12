@@ -21,4 +21,4 @@ class SalesOrder(CSVCreator):
 	Input the first line into the text list.
 		"""
 		self.text = [textIn]
-		self.header, self.indicies = self.getHeaderAndIndicies()
+		CSVCreator.__init__(self)
