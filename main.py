@@ -15,7 +15,7 @@ import os
 
 
 #	CONSTANTS
-PATH = 'Sales Files 2'
+PATH = 'Sales Files'
 files = FileList(PATH)
 print files.files
 
