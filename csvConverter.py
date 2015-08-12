@@ -159,12 +159,15 @@ class CSVCreator(object):
 	defines the locations on a given line where the specific fields are,
 	and creates the csv file
 		"""
+		self.SIG_FIGS = 5
 
 		self.customerID = ''
 		self.customer = ''
 		self.itemID = ''
 		self.item = ''
 		self.total = None
+		self.totalSum = 0
+		self.rate = 0
 
 		self.header = ['Customer ID', 'Customer Name', 'Item ID', \
 			'Item Description', 'Date','Quantity','Rate', 'Price',\
@@ -248,6 +251,7 @@ class CSVCreator(object):
 		end = len(self.header)
 		self.__setCustomer()
 		self.__setItem()
+		self.__setRate()
 		for field in self.header:
 			self.__setField(field)
 			count += 1
@@ -271,6 +275,8 @@ class CSVCreator(object):
 			fieldVal = self.itemID
 		elif field == self.header[3]:
 			fieldVal = self.item
+		elif field = self.header[6]:
+			fieldVal = self.rate
 		elif field == self.header[-1]:
 			if self.__isCredit():
 				fieldVal = 'Credit'
@@ -356,5 +362,18 @@ class CSVCreator(object):
 		return False
 
 	def __clearCustomer(self):
+		"""
+		Clears customer from memory so customer is not repeated for every row.
+		"""
 		self.customer = ''
 		self.customerID	= ''
+
+	def __setRate(self):
+		"""
+		Calculates the rate to a higher percision of digits so the original value can 
+		be overwritten.
+		"""
+		self.rate = float(self.__iterText(self.header[7])) / float(self.__iterText(self.\
+			header[5]))
+
+		self.rate = str(round(self.rate,self.SIG_FIGS))
