@@ -275,7 +275,7 @@ class CSVCreator(object):
 			fieldVal = self.itemID
 		elif field == self.header[3]:
 			fieldVal = self.item
-		elif field = self.header[6]:
+		elif field == self.header[6]:
 			fieldVal = self.rate
 		elif field == self.header[-1]:
 			if self.__isCredit():
