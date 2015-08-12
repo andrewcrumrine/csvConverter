@@ -374,6 +374,6 @@ class CSVCreator(object):
 		be overwritten.
 		"""
 		if not self.__isCredit():
-			quantity = float(self.__iterText(self.header[5]))
+			quantity = float(s.removeCommas(self.__iterText(self.header[5])))
 			price = float(s.removeCommas(self.__iterText(self.header[7])))
 			self.rate = str(round(price / quantity,self.SIG_FIGS))
