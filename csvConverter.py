@@ -40,6 +40,7 @@ class CSVCreator(object):
 		self.useSalesOrder = useSalesOrder
 		self.total = 0
 		self.writeTotal = False
+		self.printCustomer = True
 
 		self.header = ['Customer ID', 'Customer Name', 'Item ID', \
 			'Item Description', 'Date','Quantity','Rate', 'Price',\
@@ -158,6 +159,16 @@ class CSVCreator(object):
 				self.writeTotal = False
 			self.__setText(textIn)
 			self.__setEntry()
+		self.__writeCreditsFromSalesOrder()
+
+	def __writeCreditsFromSalesOrder(self):
+		"""
+	Iterates the Sales Order object and writes to Credit csv
+		"""
+		credits = self.salesOrder.getCredits()
+		for textIn in credits:
+			self.__setText(textIn)
+			self.__setEntry(self.Cfid)
 
 	def __setText(self,textIn):
 		"""
@@ -176,25 +187,27 @@ class CSVCreator(object):
 		self.switchText = textIn
 
 
-	def __setEntry(self):
+	def __setEntry(self,fid = None):
 		"""
 	This is method manages the data written to the csv file.  It saves the
 	customer and item data to be used on other entries
 		"""
+		if fid is None:
+			fid = self.fid
 		count = 0
 		end = len(self.header)
-		self.__setCustomer()
+		self.__setCustomer(fid)
 		self.__setItem()
 		self.setRate()
 		for field in self.header:
 			if field != 'Sales Total':
-				self.__setField(field)
+				self.__setField(field,fid)
 			elif field == 'Sales Total' and self.writeTotal:
-				self.__setField(field)
+				self.__setField(field,fid)
 			count += 1
 			if count != end:
-				self.__nextField()
-		self.__nextEntry()
+				self.__nextField(fid)
+		self.__nextEntry(fid)
 
 	def __setField(self,field,fid=None):
 		"""
@@ -205,9 +218,15 @@ class CSVCreator(object):
 	writes to the csv.
 		"""
 		if field == self.header[0]:
-			fieldVal = self.customerID
+			if self.printCustomer:
+				fieldVal = self.customerID
+			else:
+				fieldVal = ''
 		elif field == self.header[1]:
-			fieldVal = self.customer
+			if self.printCustomer:
+				fieldVal = self.customer
+			else:
+				fieldVal = ''
 		elif field == self.header[2]:
 			fieldVal = self.itemID
 		elif field == self.header[3]:
@@ -269,16 +288,20 @@ class CSVCreator(object):
 		if customerID.find(' ') == -1:
 			self.customerID = customerID
 			return True
-		self.__clearCustomer()
 		return False
 
-	def __setCustomer(self):
+	def __setCustomer(self,fid = None):
 		"""
 	This method runs the hasCustomer method.  If the text variable has customer
 	data, it sets the customer variables
 		"""
+		if fid is None:
+			fid = self.fid
+		if fid == self.fid:
+			self.printCustomer = False
 		if self.__hasCustomer():
 			self.customer = self.iterText(self.header[1])
+			self.printCustomer = True
 		pass
 
 	def __hasItem(self):
@@ -370,7 +393,6 @@ class SalesOrder(CSVCreator):
 	Inputs text from the CSV Creator to the text list
 		"""
 		self.addToTotal(textIn)
-		print self.total
 		self.entries.append(textIn)
 
 	def getTotal(self):
@@ -386,6 +408,10 @@ class SalesOrder(CSVCreator):
 		if not self.isCredit(textIn):
 			price = float(s.removeCommas(self.iterText('Price',True,textIn)))
 			self.total += price
+		else:
+			price = float(s.removeCommas(s.removeMinus(self.iterText(\
+				'Price',True,textIn))))
+			self.total -= price
 
 
 	def getEntries(self):
@@ -395,6 +421,12 @@ class SalesOrder(CSVCreator):
 		self.__createCreditList()
 		self.__removeCreditsFromEntries()
 		return self.entries
+
+	def getCredits(self):
+		"""
+	Returns the stored credits in the object.
+		"""
+		return self.credits
 
 
 	def __createCreditList(self):
