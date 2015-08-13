@@ -10,141 +10,6 @@
 
 import stringMan as s
 
-class TxtFileReader():
-	"""
-	This object manages opening the incoming text file, creating a TxtBuffer
-	object, destroying it and moving on to the next line.  The object also
-	manages when the read text is in the header.
-	"""
-	def __init__(self, filenameIn):
-		"""
-	This initializes the TxtFileReader object.  It stops the program if a
-	file cannot be opened.
-		"""
-		self.header = True
-		self.reading = True
-		self.buffer = None
-		self.fid = None
-		try:
-			self.fid = open(filenameIn,'r')
-		except IOError:
-			print filenameIn + " does not exist in this directory."
-			raise SystemExit
-
-	def __del__(self):
-		"""
-	When the object is destroyed, this method will close the file.
-		"""
-		if self.fid != None:
-			self.fid.close()
-
-	def getNextLine(self):
-		"""
-	This method creates a new TxtBuffer object.  It tells the program when
-	There is no more text to be read.
-		"""
-		self.buffer = TxtBuffer(self.fid)
-		self.__setReading()
-		self.__updateHeader()
-		if self.buffer.returnLine and self.header == False:
-			return self.buffer
-		return None
-
-	def __updateHeader(self):
-		"""
-	This method manages the header instance variable based off of what's
-	passed from the TxtBuffer object.
-		"""
-		if self.buffer.header != None:
-			if self.buffer.header and self.header == False:
-				self.header = True
-			if self.buffer.header == False and self.header == True:
-				self.header = False
-
-	def __setReading(self):
-		"""
-	This method sets the reading method to false if there are no more
-	lines of text read from the file.
-		"""
-		if self.buffer.text == '':
-			self.reading = False
-
-class TxtBuffer():
-	"""
-	This class screens the string produced by the readline method
-	from the TxtFileReader class.  It checks for the header, the sum
-	lines and blank lines.
-	"""
-
-	def __init__(self,fid):
-		"""
-	This initializes instance variables such as keys, the size of the 
-	string and the content read from the TxtFileReader() object
-		"""
-		self.HEADER_KEY_START = ' */**/15'
-		self.HEADER_KEY_STOP = '------'
-		self.TOTAL_KEY_1 = '*\r\r\n'
-		self.TOTAL_KEY_2 = '*\r\n'
-		self.TOTAL_KEY_3 = '*\n'
-		self.text = fid.readline()
-		self.size = len(self.text)
-		self.header = None
-		self.returnLine = self.__checkReturnLine()
-
-	def __checkReturnLine(self):
-		"""
-	This method screens the string output for undesirable strings
-		"""
-		if self.__isHeader() or self.__isBlankLine() or self.__isTotalLine():
-			return False
-		return True
-
-	def __isBlankLine(self):
-		"""
-	This method checks the read screen for a blank line.
-		"""
-		if self.size < 10:
-			return True
-		return False
-
-	def __isHeader(self):
-		"""
-	This method checks the read line to see if it's a header.
-		"""
-		if self.__isSpecialLine(self.HEADER_KEY_START,0,'*') :
-			self.header = True
-			return True
-		if self.__isSpecialLine(self.HEADER_KEY_STOP,0) :
-			self.header = False
-			return True
-		return False
-
-	def __isTotalLine(self):
-		"""
-	This method screens for any totals lines produced by the report.
-		"""
-		if self.__isSpecialLine(self.TOTAL_KEY_1,self.size - len(self.TOTAL_KEY_1)) \
-		or self.__isSpecialLine(self.TOTAL_KEY_2,self.size - len(self.TOTAL_KEY_2)) \
-		or self.__isSpecialLine(self.TOTAL_KEY_3,self.size - len(self.TOTAL_KEY_3)):
-			return True
-		return False
-
-	def __isSpecialLine(self,key,loc,wc=None):
-		"""
-	This method is a general method that returns a boolean if the text you're
-	looking for is where you expect it to be.
-		"""
-		if s.wildSearch(self.text,key,wc) == loc :
-			return True
-		return False
-
-	def getText(self):
-		"""
-	This method returns the instance text variable.  It's called if the text
-	passes all of the tests.  It intentionally removes the last two characters
-	to prevent extra new line characters from being passed to the csv.
-		"""
-		return self.text[:-2]
 
 class CSVCreator(object):
 	"""
@@ -153,7 +18,7 @@ class CSVCreator(object):
 	the data into the required fields.
 	"""
 
-	def __init__(self,filenameIn):
+	def __init__(self,filenameIn=None,useSalesOrder = False):
 		"""
 	This initializes the CSVCreator object.  It sets the header titles,
 	defines the locations on a given line where the specific fields are,
@@ -165,29 +30,52 @@ class CSVCreator(object):
 		self.customer = ''
 		self.itemID = ''
 		self.item = ''
-		self.total = None
-		self.totalSum = 0
 		self.rate = 0
+		self.fileIn = filenameIn
+		self.fileOut = None
+		self.text = ''
+		self.switchText = ''
+		self.fid = None
+		self.Cfid = None
+		self.useSalesOrder = useSalesOrder
+		self.total = 0
+		self.writeTotal = False
+		self.printCustomer = True
 
 		self.header = ['Customer ID', 'Customer Name', 'Item ID', \
 			'Item Description', 'Date','Quantity','Rate', 'Price',\
-			'Transaction Type']
+			'Sales Total','Transaction Type']
 
 		self.indices = {self.header[0]:[0,8], self.header[1]:[14,40], \
 			self.header[2]:[44,60], self.header[3]:[60,86], self.header[4]:\
 			[101,110], self.header[5]:[110,135], self.header[6]:[160,171],\
 			self.header[7]:[171,185]}
-		self.fileOut = self.__getFilenameOut(filenameIn)
-		self.text = ''
-		if self.__isCSV() :
-			self.fid = open(self.fileOut,'w')
-			self.__createHeader()
+		if type(self) == CSVCreator:
+			self.salesOrder = None
+			self.__createCSV()
+
 
 	def __del__(self):
 		"""
 	This method runs when the object is destroyed.  It closes the file.
 		"""
-		self.fid.close()
+		if self.fid is not None:
+			self.fid.close()
+		if self.Cfid is not None:
+			self.Cfid.close()
+
+	def __createCSV(self):
+		"""
+	Copies the filename in and generates a csv.  Completes after creating a 
+	header
+		"""
+		self.fileOut = self.__getFilenameOut(self.fileIn)
+		self.text = ''
+		if self.__isCSV() :
+			self.fid = open(self.fileOut,'w')
+			self.__createCreditCSV()
+			self.__createHeader()
+			self.__createHeader(self.Cfid)
 
 
 	def __getFilenameOut(self,filenameIn):
@@ -199,6 +87,13 @@ class CSVCreator(object):
 			return filenameIn[:filenameIn.find('.txt')] + '.csv'
 		return filenameIn
 
+	def __createCreditCSV(self):
+		"""
+	Creates a csv only for the credits
+		"""
+		fOut = self.__getFilenameOut(self.fileIn)
+		fOut = fOut[:fOut.find('.csv')] + '-Credits' + '.csv'
+		self.Cfid = open(fOut,'w')
 
 	def __isCSV(self):
 		"""
@@ -210,19 +105,22 @@ class CSVCreator(object):
 		return False
 
 
-	def __createHeader(self):
+	def __createHeader(self,fid=None):
 		"""
 	This method runs after the csv has been verified.  It creates the header
 	based off of the previously defined fields.
 		"""
+		if fid is None:
+			fid = self.fid
 		count = 0
 		end = len(self.header)
 		for field in self.header:
-			self.fid.write(field)
+			fid.write(field)
 			count += 1
 			if count != end:
-				self.__nextField()
-		self.__nextEntry()
+				self.__nextField(fid)
+		self.__nextEntry(fid)
+		
 
 	def writeToCSV(self,textIn):
 		"""
@@ -230,9 +128,47 @@ class CSVCreator(object):
 	and wraps around the setText and setEntry method.  It passes the incoming
 	string to the setText method.		
 		"""
-		self.__setText(textIn)
-		self.__setEntry()
+		if self.useSalesOrder:
+			self.__setSwitchedText(textIn)
+			self.__setText(textIn)
+			if self.__hasCustomer() and self.salesOrder is None:
+				self.__createSalesOrder(textIn)
+			elif self.__hasCustomer() and self.salesOrder is not None:
+				self.total = self.salesOrder.getTotal()
+				self.__writeFromSalesOrder()
+				self.__createSalesOrder(textIn)
+			elif not self.__hasCustomer():
+				self.__addToSalesOrder(textIn)
 
+		else:
+			self.__setText(textIn)
+			self.__setEntry()
+
+	def __writeFromSalesOrder(self):
+		"""
+	Iterates the Sales Order object and writes to csv
+		"""
+		entries = self.salesOrder.getEntries()
+		count = 0
+		end = len(entries)
+		for textIn in entries:
+			count += 1
+			if count == end:
+				self.writeTotal = True
+			else:
+				self.writeTotal = False
+			self.__setText(textIn)
+			self.__setEntry()
+		self.__writeCreditsFromSalesOrder()
+
+	def __writeCreditsFromSalesOrder(self):
+		"""
+	Iterates the Sales Order object and writes to Credit csv
+		"""
+		credits = self.salesOrder.getCredits()
+		for textIn in credits:
+			self.__setText(textIn)
+			self.__setEntry(self.Cfid)
 
 	def __setText(self,textIn):
 		"""
@@ -241,25 +177,40 @@ class CSVCreator(object):
 		"""
 		self.text = textIn
 
+	def __setSwitchedText(self,textIn):
+		"""
+	This method sets the text variable to the value passed to it by the
+	writeToCSV method.  Used to store a line of text that does not belong to the
+	buffered sales order.  Once the sales order is committed to the csv, the
+	switched text is transfered to the normal text.
+		"""
+		self.switchText = textIn
 
-	def __setEntry(self):
+
+	def __setEntry(self,fid = None):
 		"""
 	This is method manages the data written to the csv file.  It saves the
 	customer and item data to be used on other entries
-		"""
+		"""		
+		self.printCustomer = True
+		if fid is None:
+			fid = self.fid
 		count = 0
 		end = len(self.header)
-		self.__setCustomer()
+		self.__setCustomer(fid)
 		self.__setItem()
-		self.__setRate()
+		self.setRate()
 		for field in self.header:
-			self.__setField(field)
+			if field != 'Sales Total':
+				self.__setField(field,fid)
+			elif field == 'Sales Total' and self.writeTotal:
+				self.__setField(field,fid)
 			count += 1
 			if count != end:
-				self.__nextField()
-		self.__nextEntry()
+				self.__nextField(fid)
+		self.__nextEntry(fid)
 
-	def __setField(self,field):
+	def __setField(self,field,fid=None):
 		"""
 	This method writes data to the csv file.  It pulls persistant data
 	stored in the class for the fields it doesn't have.  It scrubs the data
@@ -268,69 +219,90 @@ class CSVCreator(object):
 	writes to the csv.
 		"""
 		if field == self.header[0]:
-			fieldVal = self.customerID
+			if self.printCustomer:
+				fieldVal = self.customerID
+			else:
+				fieldVal = ''
 		elif field == self.header[1]:
-			fieldVal = self.customer
+			if self.printCustomer:
+				fieldVal = self.customer
+			else:
+				fieldVal = ''
 		elif field == self.header[2]:
 			fieldVal = self.itemID
 		elif field == self.header[3]:
 			fieldVal = self.item
 		elif field == self.header[6]:
 			fieldVal = self.rate
+		elif field == self.header[-2]:
+			fieldVal = self.total
 		elif field == self.header[-1]:
-			if self.__isCredit():
+			if self.isCredit():
 				fieldVal = 'Credit'
 			else:
 				fieldVal = 'Sale'
 		else:
-			fieldVal = self.__iterText(field)
+			fieldVal = self.iterText(field)
 		fieldVal = s.removeSpaces(fieldVal)
 		fieldVal = s.removeCommas(fieldVal)
-		self.fid.write(fieldVal)
+		if fid is None:
+			fid = self.fid
+		fid.write(fieldVal)
 
 
-	def __nextField(self):
+	def __nextField(self,fid = None):
 		"""
 	This method just adds a comma to the csv. It divides the two fields.
 		"""
-		self.fid.write(',')
+		if fid is None:
+			fid = self.fid
+		fid.write(',')
 
 
-	def __nextEntry(self):
+	def __nextEntry(self,fid=None):
 		"""
 	This method just writes a new line character to the csv.  It divides the
 	two entries.
 		"""
-		self.fid.write('\n')
+		if fid is None:
+			fid = self.fid
+		fid.write('\n')
 
-	def __iterText(self,textIn):
+	def iterText(self,keyIn,altText=False,textIn=None):
 		"""
 	This method does the grunt work.  It accepts a string, searches the
 	dictionary for the two keys, splices the instance variable holding the
 	string from the text file, and returns the splice.
 		"""
-		key1 = self.indices[textIn][0]
-		key2 = self.indices[textIn][1]
-		return self.text[key1:key2]
+		key1 = self.indices[keyIn][0]
+		key2 = self.indices[keyIn][1]
+		if not altText:
+			return self.text[key1:key2]
+		else:
+			return textIn[key1:key2]
 
 	def __hasCustomer(self):
 		"""
 	This method checks if the instance text variable has customer data.
 		"""
-		customerID = self.__iterText(self.header[0])
+		customerID = self.iterText(self.header[0])
 		if customerID.find(' ') == -1:
 			self.customerID = customerID
 			return True
-		self.__clearCustomer()
 		return False
 
-	def __setCustomer(self):
+	def __setCustomer(self,fid = None):
 		"""
 	This method runs the hasCustomer method.  If the text variable has customer
 	data, it sets the customer variables
 		"""
+		if fid is None:
+			fid = self.fid
+		if fid == self.fid:
+			self.printCustomer = False
 		if self.__hasCustomer():
-			self.customer = self.__iterText(self.header[1])
+			self.customer = self.iterText(self.header[1])
+			self.printCustomer = True
 		pass
 
 	def __hasItem(self):
@@ -338,7 +310,7 @@ class CSVCreator(object):
 	This method is the same as the hasCustomer method, but checks the item data
 	It returns a boolean.
 		"""
-		itemID = self.__iterText(self.header[2])
+		itemID = self.iterText(self.header[2])
 		if itemID.find('F') != -1 or itemID.find('G') != -1:
 			self.itemID = itemID
 			return True
@@ -349,31 +321,126 @@ class CSVCreator(object):
 	This method is the same as the setCustomer method, but sets the item data.
 		"""
 		if self.__hasItem():
-			self.item = self.__iterText(self.header[3])
+			self.item = self.iterText(self.header[3])
 		pass
 
-	def __isCredit(self):
+	def isCredit(self,textIn=None):
 		"""
 	This method checks the quantity field to make sure the transaction is
 	a sale.  If not, it returns false.
 		"""
-		if self.__iterText(self.header[5]).find('-') >= 0:
-			return True
+		if textIn is None:
+			if self.iterText(self.header[5]).find('-') >= 0:
+				return True
+		else:
+			if self.iterText(self.header[5],True,textIn).find('-') >= 0:
+				return True
 		return False
 
 	def __clearCustomer(self):
 		"""
-		Clears customer from memory so customer is not repeated for every row.
+	Clears customer from memory so customer is not repeated for every row.
 		"""
 		self.customer = ''
 		self.customerID	= ''
 
-	def __setRate(self):
+	def setRate(self,textIn=None):
 		"""
-		Calculates the rate to a higher percision of digits so the original value can 
-		be overwritten.
+	Calculates the rate to a higher percision of digits so the original value can 
+	be overwritten.
 		"""
-		if not self.__isCredit():
-			quantity = float(s.removeCommas(self.__iterText(self.header[5])))
-			price = float(s.removeCommas(self.__iterText(self.header[7])))
-			self.rate = str(round(price / quantity,self.SIG_FIGS))
+		if textIn is None:
+			if not self.isCredit():
+				quantity = float(s.removeCommas(self.iterText(self.header[5])))
+				price = float(s.removeCommas(self.iterText(self.header[7])))
+				self.rate = str(round(price / quantity,self.SIG_FIGS))
+		else:
+			if not self.isCredit():
+				quantity = float(s.removeCommas(self.iterText('Quantity',True,\
+					textIn)))
+				price = float(s.removeCommas(self.iterText('Price',True,\
+					textIn)))
+				return str(round(price / quantity,self.SIG_FIGS))
+
+	def __createSalesOrder(self,textIn):
+		"""
+	Creates sales order list in order to return sum total.
+		"""
+		self.salesOrder = SalesOrder(textIn)
+
+	def __addToSalesOrder(self,textIn):
+		"""
+	Adds additional lines of text to the sales order object
+		"""
+		self.salesOrder.addEntry(textIn)
+
+class SalesOrder(CSVCreator):
+	"""
+	Builds a sales order from a series of itemized lines inputed from the 
+	CSVCreator object.  The intent of the class is to output a sum total.
+	"""
+	def __init__(self,textIn):
+		"""
+	Input the first line into the text list.
+		"""
+		CSVCreator.__init__(self)
+		self.entries = [textIn]
+		self.total = 0
+		self.addToTotal(textIn)
+		self.credits = []
+
+	def addEntry(self, textIn):
+		"""
+	Inputs text from the CSV Creator to the text list
+		"""
+		self.addToTotal(textIn)
+		self.entries.append(textIn)
+
+	def getTotal(self):
+		"""
+	Returns total calculated price for the sales order in a string
+		"""
+		return str(round(self.total,2))
+
+	def addToTotal(self,textIn):
+		"""
+	Returns the added price to the total
+		"""
+		if not self.isCredit(textIn):
+			price = float(s.removeCommas(self.iterText('Price',True,textIn)))
+			self.total += price
+		else:
+			price = float(s.removeCommas(s.removeMinus(self.iterText(\
+				'Price',True,textIn))))
+			self.total -= price
+
+
+	def getEntries(self):
+		"""
+	Returns the stored entries in the object.
+		"""
+		self.__createCreditList()
+		self.__removeCreditsFromEntries()
+		return self.entries
+
+	def getCredits(self):
+		"""
+	Returns the stored credits in the object.
+		"""
+		return self.credits
+
+
+	def __createCreditList(self):
+		"""
+	Builds list of credits in order
+		"""
+		for entry in self.entries:
+			if self.isCredit(entry):
+				self.credits.append(entry)
+
+	def __removeCreditsFromEntries(self):
+		"""
+	Scans the entry list for credits and removes them.
+		"""
+		for credit in self.credits:
+			self.entries.remove(credit)

@@ -8,8 +8,9 @@
 
 """
 
-#	Import csvConverter
+#	Import required libraries
 from csvConverter import *
+from fileReader import *
 from manageFiles import *
 import os
 
@@ -22,7 +23,7 @@ print files.files
 while not files.isEmpty():
 	nextFile = files.getNextFile()
 
-	csvOut = CSVCreator(nextFile)
+	csvOut = CSVCreator(nextFile,True)
 	inFile = TxtFileReader(nextFile)
 
 	while inFile.reading:
