@@ -191,7 +191,8 @@ class CSVCreator(object):
 		"""
 	This is method manages the data written to the csv file.  It saves the
 	customer and item data to be used on other entries
-		"""
+		"""		
+		self.printCustomer = True
 		if fid is None:
 			fid = self.fid
 		count = 0
