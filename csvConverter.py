@@ -8,6 +8,8 @@
 
 """
 
+import stringMan as s
+
 class TxtFileReader():
 	"""
 	This object manages opening the incoming text file, creating a TxtBuffer
@@ -33,7 +35,7 @@ class TxtFileReader():
 		"""
 	When the object is destroyed, this method will close the file.
 		"""
-		if self.fid != None:
+		if self.fid is not None:
 			self.fid.close()
 
 	def getNextLine(self):
@@ -151,7 +153,7 @@ class CSVCreator(object):
 	the data into the required fields.
 	"""
 
-	def __init__(self,filenameIn=None):
+	def __init__(self,filenameIn=None,useSalesOrder = False):
 		"""
 	This initializes the CSVCreator object.  It sets the header titles,
 	defines the locations on a given line where the specific fields are,
@@ -163,34 +165,40 @@ class CSVCreator(object):
 		self.customer = ''
 		self.itemID = ''
 		self.item = ''
-		self.total = None
-		self.totalSum = 0
 		self.rate = 0
 		self.fileIn = filenameIn
 		self.fileOut = None
 		self.text = ''
+		self.switchText = ''
 		self.fid = None
+		self.useSalesOrder = useSalesOrder
+		self.total = 0
+		self.writeTotal = False
 
 		self.header = ['Customer ID', 'Customer Name', 'Item ID', \
 			'Item Description', 'Date','Quantity','Rate', 'Price',\
-			'Transaction Type']
+			'Sales Total','Transaction Type']
 
 		self.indices = {self.header[0]:[0,8], self.header[1]:[14,40], \
 			self.header[2]:[44,60], self.header[3]:[60,86], self.header[4]:\
 			[101,110], self.header[5]:[110,135], self.header[6]:[160,171],\
 			self.header[7]:[171,185]}
+		if type(self) == CSVCreator:
+			self.salesOrder = None
+			self.__createCSV()
 
 
 	def __del__(self):
 		"""
 	This method runs when the object is destroyed.  It closes the file.
 		"""
-		if fid is not None:
+		if self.fid is not None:
 			self.fid.close()
 
-	def createCSV(self):
+	def __createCSV(self):
 		"""
-		Copies the filename in and generates a csv.  Completes after creating a header
+	Copies the filename in and generates a csv.  Completes after creating a 
+	header
 		"""
 		self.fileOut = self.__getFilenameOut(self.fileIn)
 		self.text = ''
@@ -239,9 +247,35 @@ class CSVCreator(object):
 	and wraps around the setText and setEntry method.  It passes the incoming
 	string to the setText method.		
 		"""
-		self.__setText(textIn)
-		self.__setEntry()
+		if self.useSalesOrder:
+			self.__setSwitchedText(textIn)
+			if self.__hasCustomer() and self.salesOrder is None:
+				self.__createSalesOrder(textIn)
+			elif self.__hasCustomer() and self.salesOrder is not None:
+				self.total = self.salesOrder.getTotal()
+				self.__writeFromSalesOrder()
+				self.__createSalesOrder(textIn)
+			elif not self.__hasCustomer():
+				self.__addToSalesOrder(textIn)
 
+		else:
+			self.__setText(textIn)
+			self.__setEntry()
+
+	def __writeFromSalesOrder(self):
+		"""
+	Iterates the Sales Order object and writes to csv
+		"""
+		count = 0
+		end = len(self.salesOrder.entries)
+		for textIn in self.salesOrder.entries:
+			count += 1
+			if count == end:
+				self.writeTotal = True
+			else:
+				self.writeTotal = False
+			self.__setText(textIn)
+			self.__setEntry()
 
 	def __setText(self,textIn):
 		"""
@@ -249,6 +283,15 @@ class CSVCreator(object):
 	writeToCSV method
 		"""
 		self.text = textIn
+
+	def __setSwitchedText(self,textIn):
+		"""
+	This method sets the text variable to the value passed to it by the
+	writeToCSV method.  Used to store a line of text that does not belong to the
+	buffered sales order.  Once the sales order is committed to the csv, the
+	switched text is transfered to the normal text.
+		"""
+		self.switchText = textIn
 
 
 	def __setEntry(self):
@@ -266,6 +309,8 @@ class CSVCreator(object):
 			count += 1
 			if count != end:
 				self.__nextField()
+			elif count == end - 1 and self.writeTotal:
+				self.__setField('Sales Total')
 		self.__nextEntry()
 
 	def __setField(self,field):
@@ -286,13 +331,15 @@ class CSVCreator(object):
 			fieldVal = self.item
 		elif field == self.header[6]:
 			fieldVal = self.rate
+		elif field == self.header[-2]:
+			fieldVal = self.total
 		elif field == self.header[-1]:
-			if self.__isCredit():
+			if self.isCredit():
 				fieldVal = 'Credit'
 			else:
 				fieldVal = 'Sale'
 		else:
-			fieldVal = self.__iterText(field)
+			fieldVal = self.iterText(field)
 		fieldVal = s.removeSpaces(fieldVal)
 		fieldVal = s.removeCommas(fieldVal)
 		self.fid.write(fieldVal)
@@ -312,21 +359,26 @@ class CSVCreator(object):
 		"""
 		self.fid.write('\n')
 
-	def __iterText(self,textIn):
+	def iterText(self,keyIn,altText=False,textIn=None):
 		"""
 	This method does the grunt work.  It accepts a string, searches the
 	dictionary for the two keys, splices the instance variable holding the
 	string from the text file, and returns the splice.
 		"""
-		key1 = self.indices[textIn][0]
-		key2 = self.indices[textIn][1]
-		return self.text[key1:key2]
+		key1 = self.indices[keyIn][0]
+		key2 = self.indices[keyIn][1]
+		if not altText:
+			return self.text[key1:key2]
+		else:
+			return textIn[key1:key2]
+
+
 
 	def __hasCustomer(self):
 		"""
 	This method checks if the instance text variable has customer data.
 		"""
-		customerID = self.__iterText(self.header[0])
+		customerID = self.iterText(self.header[0])
 		if customerID.find(' ') == -1:
 			self.customerID = customerID
 			return True
@@ -339,7 +391,7 @@ class CSVCreator(object):
 	data, it sets the customer variables
 		"""
 		if self.__hasCustomer():
-			self.customer = self.__iterText(self.header[1])
+			self.customer = self.iterText(self.header[1])
 		pass
 
 	def __hasItem(self):
@@ -347,7 +399,7 @@ class CSVCreator(object):
 	This method is the same as the hasCustomer method, but checks the item data
 	It returns a boolean.
 		"""
-		itemID = self.__iterText(self.header[2])
+		itemID = self.iterText(self.header[2])
 		if itemID.find('F') != -1 or itemID.find('G') != -1:
 			self.itemID = itemID
 			return True
@@ -358,46 +410,82 @@ class CSVCreator(object):
 	This method is the same as the setCustomer method, but sets the item data.
 		"""
 		if self.__hasItem():
-			self.item = self.__iterText(self.header[3])
+			self.item = self.iterText(self.header[3])
 		pass
 
-	def __isCredit(self):
+	def isCredit(self,textIn=None):
 		"""
 	This method checks the quantity field to make sure the transaction is
 	a sale.  If not, it returns false.
 		"""
-		if self.__iterText(self.header[5]).find('-') >= 0:
-			return True
+		if textIn is None:
+			if self.iterText(self.header[5]).find('-') >= 0:
+				return True
+		else:
+			if self.iterText(self.header[5],True,textIn).find('-') >= 0:
+				return True
 		return False
 
 	def __clearCustomer(self):
 		"""
-		Clears customer from memory so customer is not repeated for every row.
+	Clears customer from memory so customer is not repeated for every row.
 		"""
 		self.customer = ''
 		self.customerID	= ''
 
 	def __setRate(self):
 		"""
-		Calculates the rate to a higher percision of digits so the original value can 
-		be overwritten.
+	Calculates the rate to a higher percision of digits so the original value can 
+	be overwritten.
 		"""
-		if not self.__isCredit():
-			quantity = float(s.removeCommas(self.__iterText(self.header[5])))
-			price = float(s.removeCommas(self.__iterText(self.header[7])))
+		if not self.isCredit():
+			quantity = float(s.removeCommas(self.iterText(self.header[5])))
+			price = float(s.removeCommas(self.iterText(self.header[7])))
 			self.rate = str(round(price / quantity,self.SIG_FIGS))
 
-	def getText(self,textIn):
-		self.__iterText(textIn)
+	def __createSalesOrder(self,textIn):
+		"""
+	Creates sales order list in order to return sum total.
+		"""
+		self.salesOrder = SalesOrder(textIn)
+
+	def __addToSalesOrder(self,textIn):
+		"""
+	Adds additional lines of text to the sales order object
+		"""
+		self.salesOrder.addEntry(textIn)
 
 class SalesOrder(CSVCreator):
 	"""
-		Builds a sales order from a series of itemized lines inputed from the 
+	Builds a sales order from a series of itemized lines inputed from the 
 	CSVCreator object.  The intent of the class is to output a sum total.
 	"""
 	def __init__(self,textIn):
 		"""
 	Input the first line into the text list.
 		"""
-		self.text = [textIn]
 		CSVCreator.__init__(self)
+		self.entries = [textIn]
+		self.total = 0
+
+	def addEntry(self, textIn):
+		"""
+	Inputs text from the CSV Creator to the text list
+		"""
+		self.addToTotal(textIn)
+		print self.total
+		self.entries.append(textIn)
+
+	def getTotal(self):
+		"""
+	Returns total calculated price for the sales order in a string
+		"""
+		return str(round(self.total,2))
+
+	def addToTotal(self,textIn):
+		"""
+	Returns the added price to the total
+		"""
+		if not self.isCredit(textIn):
+			price = float(s.removeCommas(self.iterText('Price',True,textIn)))
+			self.total += price

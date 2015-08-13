@@ -22,7 +22,7 @@ print files.files
 while not files.isEmpty():
 	nextFile = files.getNextFile()
 
-	csvOut = CSVCreator(nextFile)
+	csvOut = CSVCreator(nextFile,True)
 	inFile = TxtFileReader(nextFile)
 
 	while inFile.reading:
