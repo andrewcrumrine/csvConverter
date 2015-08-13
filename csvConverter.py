@@ -371,7 +371,6 @@ class SalesOrder(CSVCreator):
 		"""
 	Returns the stored entries in the object.
 		"""
-		self.deductCreditsFromEntries()
 		return self.entries
 
 
@@ -389,71 +388,3 @@ class SalesOrder(CSVCreator):
 		"""
 		for credit in self.credits:
 			self.entries.remove(credit)
-
-	def __compareCredit(self,textIn):
-		"""
-	Scans entry list for credit match and returns an index, returns -1 if no match
-		"""
-		count = 0
-		for entry in self.entries:
-			if self.iterText('Item ID', True, textIn) == \
-			self.iterText('Item ID', True, entry):
-				return count
-			count += 1
-		return -1
-
-	def __returnQuantity(self,textIn):
-		"""
-	Returns quantity from text input 
-		"""
-		textOut = self.iterText('Quantity',True,textIn)
-		textOut = s.removeSpaces(textOut)
-		textOut = s.removeCommas(textOut)
-		textOut = s.removeMinus(textOut)
-		return int(textOut)
-
-	def __addSpaces(self,textIn,field):
-		"""
-	Prefixes spaces to make string desired length
-		"""
-		length = self.indices[field][1] - self.indices[field][0]
-		while len(textIn) < length:
-			textIn = ' ' + textIn
-		return textIn
-
-	def __updateEntry(self,index,quantNew,priceNew,rate):
-		"""
-	Updates the entry with the credits taken into account.
-		"""
-		newEntry = self.entries[index]
-		newEntry.replace(self.iterText('Quantity',True,newEntry),\
-			quantNew)
-		newEntry.replace(self.iterText('Rate',True,newEntry),\
-			rate)
-		newEntry.replace(self.iterText('Price',True,newEntry),\
-			priceNew)
-		self.entries[index] = newEntry
-
-	def deductCreditsFromEntries(self):
-		"""
-	Isolates credits from order, deducts credits from order if items match,
-	otherwise appends credits to entry list.
-		"""
-		creditsToAdd = []
-		self.__createCreditList()
-		self.__removeCreditsFromEntries()
-		for credit in self.credits:
-			index = self.__compareCredit(credit)
-			if index == -1:
-				creditsToAdd.append(credit)
-			else:
-				rate = self.setRate(self.entries[index])
-				quantCredit = self.__returnQuantity(credit)
-				quantEntry = self.__returnQuantity(self.entries[index])
-				quantNew = quantEntry - quantCredit
-				newPrice = self.__addSpaces(str(quantNew * float(rate)),'Price')
-				quantNew = self.__addSpaces(str(quantNew),'Quantity')
-				rate = self.__addSpaces(rate,'Rate')
-				self.__updateEntry(index,quantNew,newPrice,rate)
-
-
