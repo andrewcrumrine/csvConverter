@@ -8,8 +8,9 @@
 
 """
 
-#	Import csvConverter
+#	Import required libraries
 from csvConverter import *
+from fileReader import *
 from manageFiles import *
 import os
 
