@@ -147,3 +147,36 @@ class TxtBuffer():
 	to prevent extra new line characters from being passed to the csv.
 		"""
 		return self.text[:-2]
+
+def readHeader(fileIn):
+	"""
+	This function reads the header file to set this value 
+	for the program.  Returns header index and default values
+	"""
+	try:
+		fid = open(fileIn,'r')
+	except IOError:
+		print "Header file could not be opened.  Program terminating."
+		raise SystemExit
+	header = []
+	headMap = {}
+	textOut = None
+
+	#	Iterate to build list and dictionary
+	while textOut != '':
+		textOut = fid.read()
+		header.append(s.subStrByChar(textOut,'','\t')
+		headMap[header[-1]] = s.subStrByChar(textOut,'&','\n')
+
+	return header,headMap
+
+
+
+
+
+
+
+
+
+
+
