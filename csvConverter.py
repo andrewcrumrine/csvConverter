@@ -132,9 +132,10 @@ class CSVCreator(object):
 		"""
 	Iterates the Sales Order object and writes to csv
 		"""
+		entries = self.salesOrder.getEntries()
 		count = 0
-		end = len(self.salesOrder.entries)
-		for textIn in self.salesOrder.entries:
+		end = len(entries)
+		for textIn in entries:
 			count += 1
 			if count == end:
 				self.writeTotal = True
@@ -169,7 +170,7 @@ class CSVCreator(object):
 		end = len(self.header)
 		self.__setCustomer()
 		self.__setItem()
-		self.__setRate()
+		self.setRate()
 		for field in self.header:
 			if field != 'Sales Total':
 				self.__setField(field)
@@ -239,8 +240,6 @@ class CSVCreator(object):
 		else:
 			return textIn[key1:key2]
 
-
-
 	def __hasCustomer(self):
 		"""
 	This method checks if the instance text variable has customer data.
@@ -300,15 +299,23 @@ class CSVCreator(object):
 		self.customer = ''
 		self.customerID	= ''
 
-	def __setRate(self):
+	def setRate(self,textIn=None):
 		"""
 	Calculates the rate to a higher percision of digits so the original value can 
 	be overwritten.
 		"""
-		if not self.isCredit():
-			quantity = float(s.removeCommas(self.iterText(self.header[5])))
-			price = float(s.removeCommas(self.iterText(self.header[7])))
-			self.rate = str(round(price / quantity,self.SIG_FIGS))
+		if textIn is None:
+			if not self.isCredit():
+				quantity = float(s.removeCommas(self.iterText(self.header[5])))
+				price = float(s.removeCommas(self.iterText(self.header[7])))
+				self.rate = str(round(price / quantity,self.SIG_FIGS))
+		else:
+			if not self.isCredit():
+				quantity = float(s.removeCommas(self.iterText('Quantity',True,\
+					textIn)))
+				price = float(s.removeCommas(self.iterText('Price',True,\
+					textIn)))
+				return str(round(price / quantity,self.SIG_FIGS))
 
 	def __createSalesOrder(self,textIn):
 		"""
@@ -335,6 +342,7 @@ class SalesOrder(CSVCreator):
 		self.entries = [textIn]
 		self.total = 0
 		self.addToTotal(textIn)
+		self.credits = []
 
 	def addEntry(self, textIn):
 		"""
@@ -357,3 +365,7 @@ class SalesOrder(CSVCreator):
 		if not self.isCredit(textIn):
 			price = float(s.removeCommas(self.iterText('Price',True,textIn)))
 			self.total += price
+
+
+
+

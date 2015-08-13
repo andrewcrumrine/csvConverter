@@ -91,3 +91,13 @@ def removeCommas(textIn):
 	if loc != -1:
 		return removeCommas(textIn[:loc] + textIn[loc+1:])
 	return textIn
+
+def removeMinus(textIn):
+	"""
+	This function searches incoming text for a minus sign and returns text with 
+	it removed.
+	"""
+	loc = textIn.find('-')
+	if loc != -1:
+		return removeCommas(textIn[:loc] + textIn[loc+1:])
+	return textIn
