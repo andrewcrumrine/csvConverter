@@ -36,6 +36,7 @@ class CSVCreator(object):
 		self.text = ''
 		self.switchText = ''
 		self.fid = None
+		self.Cfid = None
 		self.useSalesOrder = useSalesOrder
 		self.total = 0
 		self.writeTotal = False
@@ -59,6 +60,8 @@ class CSVCreator(object):
 		"""
 		if self.fid is not None:
 			self.fid.close()
+		if self.Cfid is not None:
+			self.Cfid.close()
 
 	def __createCSV(self):
 		"""
@@ -69,7 +72,9 @@ class CSVCreator(object):
 		self.text = ''
 		if self.__isCSV() :
 			self.fid = open(self.fileOut,'w')
+			self.__createCreditCSV()
 			self.__createHeader()
+			self.__createHeader(self.Cfid)
 
 
 	def __getFilenameOut(self,filenameIn):
@@ -81,6 +86,13 @@ class CSVCreator(object):
 			return filenameIn[:filenameIn.find('.txt')] + '.csv'
 		return filenameIn
 
+	def __createCreditCSV(self):
+		"""
+	Creates a csv only for the credits
+		"""
+		fOut = self.__getFilenameOut(self.fileIn)
+		fOut = fOut[:fOut.find('.csv')] + '-Credits' + '.csv'
+		self.Cfid = open(fOut,'w')
 
 	def __isCSV(self):
 		"""
@@ -92,19 +104,22 @@ class CSVCreator(object):
 		return False
 
 
-	def __createHeader(self):
+	def __createHeader(self,fid=None):
 		"""
 	This method runs after the csv has been verified.  It creates the header
 	based off of the previously defined fields.
 		"""
+		if fid is None:
+			fid = self.fid
 		count = 0
 		end = len(self.header)
 		for field in self.header:
-			self.fid.write(field)
+			fid.write(field)
 			count += 1
 			if count != end:
-				self.__nextField()
-		self.__nextEntry()
+				self.__nextField(fid)
+		self.__nextEntry(fid)
+		
 
 	def writeToCSV(self,textIn):
 		"""
@@ -181,7 +196,7 @@ class CSVCreator(object):
 				self.__nextField()
 		self.__nextEntry()
 
-	def __setField(self,field):
+	def __setField(self,field,fid=None):
 		"""
 	This method writes data to the csv file.  It pulls persistant data
 	stored in the class for the fields it doesn't have.  It scrubs the data
@@ -210,22 +225,28 @@ class CSVCreator(object):
 			fieldVal = self.iterText(field)
 		fieldVal = s.removeSpaces(fieldVal)
 		fieldVal = s.removeCommas(fieldVal)
-		self.fid.write(fieldVal)
+		if fid is None:
+			fid = self.fid
+		fid.write(fieldVal)
 
 
-	def __nextField(self):
+	def __nextField(self,fid = None):
 		"""
 	This method just adds a comma to the csv. It divides the two fields.
 		"""
-		self.fid.write(',')
+		if fid is None:
+			fid = self.fid
+		fid.write(',')
 
 
-	def __nextEntry(self):
+	def __nextEntry(self,fid=None):
 		"""
 	This method just writes a new line character to the csv.  It divides the
 	two entries.
 		"""
-		self.fid.write('\n')
+		if fid is None:
+			fid = self.fid
+		fid.write('\n')
 
 	def iterText(self,keyIn,altText=False,textIn=None):
 		"""
@@ -371,6 +392,8 @@ class SalesOrder(CSVCreator):
 		"""
 	Returns the stored entries in the object.
 		"""
+		self.__createCreditList()
+		self.__removeCreditsFromEntries()
 		return self.entries
 
 
