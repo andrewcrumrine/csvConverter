@@ -21,4 +21,3 @@ New Header:
 	Tax Code
 	Units
 	Price
-	
