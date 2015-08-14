@@ -9,6 +9,7 @@
 """
 
 import stringMan as s
+import fileReader as f
 
 
 class CSVCreator(object):
@@ -42,16 +43,29 @@ class CSVCreator(object):
 		self.writeTotal = False
 		self.printCustomer = True
 
-		self.header = ['Customer ID', 'Customer Name', 'Item ID', \
-			'Item Description', 'Date','Quantity','Rate', 'Price',\
-			'Sales Total','Transaction Type']
+		self.defaults = {'Undeposited Funds':"True", "Subsidiary": "7",\
+			"Location":"3", "Payment Method":"Cash","Tax Code":"-8",\
+			"Price Level":"-1"}
 
-		self.indices = {self.header[0]:[0,8], self.header[1]:[14,40], \
-			self.header[2]:[44,60], self.header[3]:[60,86], self.header[4]:\
-			[101,110], self.header[5]:[110,135], self.header[6]:[160,171],\
-			self.header[7]:[171,185]}
+		self.customerMap = {}
+		self.itemMap = {}
+		self.unitsMap = {}
+		self.postingMap = {}
+
+#		self.header = ['Customer ID', 'Customer Name', 'Item ID', \
+#			'Item Description', 'Date','Quantity','Rate', 'Price',\
+#			'Sales Total','Transaction Type']
+		self.header = ['Undeposited Funds', 'Posting Period', 'Customer',\
+		'Subsidiary','Location','Transaction Date','Item','Quantity','Rate',\
+		'Tax Code','Units','Price Level','Sales Total']
+
+		self.indices = {'Customer ID':[0,8], 'Customer Name':[14,40], \
+			'Item ID':[44,60], 'Item Description':[60,86], 'Date':\
+			[101,110], 'Quantity':[110,135], 'Rate':[160,171],\
+			'Price':[171,185]}
 		if type(self) == CSVCreator:
 			self.salesOrder = None
+			self.__populateMaps()
 			self.__createCSV()
 
 
@@ -118,11 +132,22 @@ class CSVCreator(object):
 		count = 0
 		end = len(self.header)
 		for field in self.header:
+			if field == 'Item':
+				self.__nextField(fid)
 			fid.write(field)
 			count += 1
 			if count != end:
 				self.__nextField(fid)
 		self.__nextEntry(fid)
+
+	def __populateMaps(self):
+		"""
+	Method reads map files and populates ivars.
+		"""
+		self.customerMap = f.MapReader('customerMap.txt').getMap()
+		self.itemMap = f.MapReader('itemMap.txt').getMap()
+		self.unitMap = f.MapReader('unitMap.txt').getMap()
+		self.postingMap = f.MapReader('postingMap.txt').getMap()
 		
 
 	def writeToCSV(self,textIn):
@@ -228,29 +253,63 @@ class CSVCreator(object):
 	pulled from the header list, finds the data from the text variable and
 	writes to the csv.
 		"""
-		if field == self.header[0]:
+		if field == 'Customer ID':
 			if self.printCustomer:
 				fieldVal = self.customerID
 			else:
 				fieldVal = ''
-		elif field == self.header[1]:
+		elif field == 'Customer Name':
 			if self.printCustomer:
 				fieldVal = self.customer
 			else:
 				fieldVal = ''
-		elif field == self.header[2]:
+		elif field == 'Item ID':
 			fieldVal = self.itemID
-		elif field == self.header[3]:
+		elif field == 'Item Description':
 			fieldVal = self.item
-		elif field == self.header[6]:
+		elif field == 'Rate':
 			fieldVal = self.rate
-		elif field == self.header[-2]:
+		elif field == 'Sales Total':
 			fieldVal = self.total
-		elif field == self.header[-1]:
+		elif field == 'Transaction Type':
 			if self.isCredit():
 				fieldVal = 'Credit'
 			else:
 				fieldVal = 'Sale'
+
+		elif field == 'Undeposited Funds' or field == 'Subsidiary' or \
+		field == 'Location'	or field == 'Payment Method':
+			if self.printCustomer:
+				fieldVal = self.defaults[field]
+			else:
+				fieldVal = ''
+
+		elif field == 'Tax Code' or field == 'Price Level':
+			fieldVal = self.defaults[field]
+
+		elif field == 'Customer':
+			if self.printCustomer:
+				fieldVal = self.__getCustomerID()
+			else:
+				fieldVal = ''
+		elif field == 'Item':
+			self.__nextField(fid)
+			fieldVal = self.__getItemID()
+		elif field == 'Units':
+			fieldVal = self.__getUnits()
+		elif field == 'Transaction Date':
+			if self.printCustomer:
+				fieldVal = self.iterText('Date')
+			else:
+				fieldVal = ''
+
+		elif field == 'Posting Period':
+			if self.printCustomer:
+				fieldVal = self.__convertDateToPostingPeriod()
+			else:
+				fieldVal = ''
+
+
 		else:
 			fieldVal = self.iterText(field)
 		fieldVal = s.removeSpaces(fieldVal)
@@ -295,7 +354,7 @@ class CSVCreator(object):
 		"""
 	This method checks if the instance text variable has customer data.
 		"""
-		customerID = self.iterText(self.header[0])
+		customerID = self.iterText('Customer ID')
 		if customerID.find(' ') == -1:
 			self.customerID = customerID
 			return True
@@ -311,7 +370,7 @@ class CSVCreator(object):
 		if fid == self.fid:
 			self.printCustomer = False
 		if self.__hasCustomer():
-			self.customer = self.iterText(self.header[1])
+			self.customer = self.iterText('Customer Name')
 			self.printCustomer = True
 		pass
 
@@ -320,7 +379,7 @@ class CSVCreator(object):
 	This method is the same as the hasCustomer method, but checks the item data
 	It returns a boolean.
 		"""
-		itemID = self.iterText(self.header[2])
+		itemID = self.iterText('Item ID')
 		if itemID.find('F') != -1 or itemID.find('G') != -1:
 			self.itemID = itemID
 			return True
@@ -331,7 +390,7 @@ class CSVCreator(object):
 	This method is the same as the setCustomer method, but sets the item data.
 		"""
 		if self.__hasItem():
-			self.item = self.iterText(self.header[3])
+			self.item = self.iterText('Item Description')
 		pass
 
 	def isCredit(self,textIn=None):
@@ -340,10 +399,10 @@ class CSVCreator(object):
 	a sale.  If not, it returns false.
 		"""
 		if textIn is None:
-			if self.iterText(self.header[5]).find('-') >= 0:
+			if self.iterText('Quantity').find('-') >= 0:
 				return True
 		else:
-			if self.iterText(self.header[5],True,textIn).find('-') >= 0:
+			if self.iterText('Quantity',True,textIn).find('-') >= 0:
 				return True
 		return False
 
@@ -361,8 +420,8 @@ class CSVCreator(object):
 		"""
 		if textIn is None:
 			if not self.isCredit():
-				quantity = float(s.removeCommas(self.iterText(self.header[5])))
-				price = float(s.removeCommas(self.iterText(self.header[7])))
+				quantity = float(s.removeCommas(self.iterText('Quantity')))
+				price = float(s.removeCommas(self.iterText('Price')))
 				self.rate = str(round(price / quantity,self.SIG_FIGS))
 		else:
 			if not self.isCredit():
@@ -383,6 +442,43 @@ class CSVCreator(object):
 	Adds additional lines of text to the sales order object
 		"""
 		self.salesOrder.addEntry(textIn)
+
+	def __getCustomerID(self):
+		"""
+	Returns the Customer NetSuite ID
+		"""
+		customer = s.removeSpaces(self.customerID)
+		return self.customerMap[customer]
+
+	def __getItemID(self):
+		"""
+	Returns the Item NetSuite ID
+		"""
+		item = s.removeSpaces(self.itemID)
+		return self.itemMap[item]
+
+	def __getUnits(self):
+		"""
+	Returns sale unit type
+		"""
+		item = s.removeSpaces(self.itemID)
+		return self.unitMap[item]
+
+	def __getPostingPeriod(self,key):
+		"""
+	Returns the posting period id
+		"""
+		return self.postingMap[key]
+
+	def __convertDateToPostingPeriod(self):
+		"""
+	Converts the date of the transaction to the postion period id 
+		"""
+		date = s.removeSpaces(self.iterText('Date'))
+		month = s.subStrByChar(date,'','/')
+		date_w_no_month = s.subStrByChar(date+'*', '/','*')
+		year = s.subStrByChar(date_w_no_month+'*','/','*')
+		return self.__getPostingPeriod(month + '/' + year)
 
 class SalesOrder(CSVCreator):
 	"""

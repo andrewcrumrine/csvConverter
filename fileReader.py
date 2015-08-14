@@ -147,3 +147,38 @@ class TxtBuffer():
 	to prevent extra new line characters from being passed to the csv.
 		"""
 		return self.text[:-2]
+
+class MapReader(object):
+	def __init__(self,fileIn):
+		self.delim = '\t'
+		self.fid = None
+		self.fileName = fileIn
+		self.reading = True
+		self._openFile()
+
+	def __del__(self):
+		if self.fid is not None:
+			self.fid.close()
+
+	def _openFile(self):
+		self.fid = open(self.fileName,'r')
+
+	def getMap(self):
+		mapOut = {}
+		while self.reading:
+			key,value = self._getNextPair()
+			if key is not None:
+				mapOut[key] = value
+		return mapOut
+
+	def _getNextPair(self):
+		text = self.fid.readline()
+		if text == '':
+			self.reading = False
+		else:
+			key = s.subStrByChar(text,'','\t')
+			key = s.removeSpaces(key)
+			value = s.subStrByChar(text,'\t','\n')
+			value = s.removeSpaces(value)
+			return key,value
+		return None,None
