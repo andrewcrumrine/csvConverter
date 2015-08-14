@@ -94,7 +94,7 @@ class CSVCreator(object):
 	Creates a csv only for the credits
 		"""
 		fOut = self.__getFilenameOut(self.fileIn)
-		fOut = fOut[:fOut.find('.csv')] + '-Credits' + '.csv'
+		fOut = fOut[:fOut.find('/')+1] + 'Credits-' + fOut[:fOut.find('.csv')]
 		self.Cfid = open(fOut,'w')
 
 	def __isCSV(self):

@@ -101,3 +101,9 @@ def removeMinus(textIn):
 	if loc != -1:
 		return removeCommas(textIn[:loc] + textIn[loc+1:])
 	return textIn
+
+def subStrByChar(textIn,char1,char2):
+	"""
+	Function returns a substring nestled between two chars
+	"""
+	return textIn[textIn.find(char1)+len(char1):textIn.find(char2)]
