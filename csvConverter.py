@@ -73,9 +73,11 @@ class CSVCreator(object):
 		self.text = ''
 		if self.__isCSV() :
 			self.fid = open(self.fileOut,'w')
-			self.__createCreditCSV()
 			self.__createHeader()
-			self.__createHeader(self.Cfid)
+
+			if self.useSalesOrder:			
+				self.__createCreditCSV()
+				self.__createHeader(self.Cfid)
 
 
 	def __getFilenameOut(self,filenameIn):
@@ -160,6 +162,13 @@ class CSVCreator(object):
 			self.__setText(textIn)
 			self.__setEntry()
 		self.__writeCreditsFromSalesOrder()
+
+	def closeCSV(self):
+		"""
+	Public method used to clear sales order.
+		"""
+		self.total = self.salesOrder.getTotal()
+		self.__writeFromSalesOrder()
 
 	def __writeCreditsFromSalesOrder(self):
 		"""

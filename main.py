@@ -20,6 +20,8 @@ PATH = 'Sales Files'
 files = FileList(PATH)
 print files.files
 
+totalSize = 0
+
 while not files.isEmpty():
 	nextFile = files.getNextFile()
 
@@ -30,7 +32,10 @@ while not files.isEmpty():
 		lineOut = inFile.getNextLine()
 		if lineOut != None:
 			csvOut.writeToCSV(lineOut.getText())
+	csvOut.closeCSV()
 
 	size = os.path.getsize(csvOut.fileOut)
+	totalSize += size
 	print "Wrote " + str(size) + " bytes to " + csvOut.fileOut + "."
 print "Program finished writing to csv."
+print "Wrote " + str(totalSize) + " bytes total to csvs."
