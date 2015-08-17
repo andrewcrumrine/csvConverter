@@ -419,17 +419,18 @@ class CSVCreator(object):
 	be overwritten.
 		"""
 		if textIn is None:
-			if not self.isCredit():
-				quantity = float(s.removeCommas(self.iterText('Quantity')))
-				price = float(s.removeCommas(self.iterText('Price')))
-				self.rate = str(round(price / quantity,self.SIG_FIGS))
+#			if not self.isCredit():
+			quantity = float(s.removeMinus(s.removeCommas(\
+				self.iterText('Quantity'))))
+			price = float(s.removeMinus(s.removeCommas(self.iterText('Price'))))
+			self.rate = str(round(price / quantity,self.SIG_FIGS))
 		else:
-			if not self.isCredit():
-				quantity = float(s.removeCommas(self.iterText('Quantity',True,\
-					textIn)))
-				price = float(s.removeCommas(self.iterText('Price',True,\
-					textIn)))
-				return str(round(price / quantity,self.SIG_FIGS))
+#			if not self.isCredit():
+			quantity = float(s.removeMinus(s.removeCommas(\
+				self.iterText('Quantity',True,textIn))))
+			price = float(s.removeMinus(s.removeCommas(\
+				self.iterText('Price',True,textIn))))
+			return str(round(price / quantity,self.SIG_FIGS))
 
 	def __createSalesOrder(self,textIn):
 		"""
