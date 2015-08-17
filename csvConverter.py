@@ -52,9 +52,7 @@ class CSVCreator(object):
 		self.unitsMap = {}
 		self.postingMap = {}
 
-#		self.header = ['Customer ID', 'Customer Name', 'Item ID', \
-#			'Item Description', 'Date','Quantity','Rate', 'Price',\
-#			'Sales Total','Transaction Type']
+
 		self.header = ['Undeposited Funds', 'Posting Period', 'Customer',\
 		'Subsidiary','Location','Payment Method','Transaction Date','Item',\
 		'Quantity','Rate','Tax Code','Units','Price Level','Sales Total']
@@ -419,13 +417,11 @@ class CSVCreator(object):
 	be overwritten.
 		"""
 		if textIn is None:
-#			if not self.isCredit():
 			quantity = float(s.removeMinus(s.removeCommas(\
 				self.iterText('Quantity'))))
 			price = float(s.removeMinus(s.removeCommas(self.iterText('Price'))))
 			self.rate = str(round(price / quantity,self.SIG_FIGS))
 		else:
-#			if not self.isCredit():
 			quantity = float(s.removeMinus(s.removeCommas(\
 				self.iterText('Quantity',True,textIn))))
 			price = float(s.removeMinus(s.removeCommas(\
