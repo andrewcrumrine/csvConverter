@@ -67,7 +67,7 @@ class CSVCreator(object):
 		if type(self) == CSVCreator:
 			if useMap:
 				self.salesMap = None
-				self.header = ['NetSuite ID'] + self.header
+				self.header = ['NetSuite ID'] + self.header + ['Cost']
 				self.nsId = None
 				self.salesTotal = 0
 			self.salesOrder = None
@@ -275,6 +275,8 @@ class CSVCreator(object):
 				fieldVal = self.customerID
 			else:
 				fieldVal = ''
+		elif field == 'Cost':
+			fieldVal = self.__getTotalCost()
 		elif field == 'Customer Name':
 			if self.printCustomer:
 				fieldVal = self.customer
@@ -501,9 +503,22 @@ class CSVCreator(object):
 	Read map to extract NetSuite Id
 		"""
 		date = self.date
+		day = date[date.find('/'):date.rfind('/')]
+		if  day.find('/0') >= 0:
+			day = s.addWC(day,day.find('0'),'')
+			date = date[:date.find('/')] + day + date[date.rfind('/'):]
 		date = date[:date.rfind('/')+1] + '20' + date[date.rfind('/')+1:]
 		self.nsId = self.salesMap.getID(self.customerID,date,self.salesTotal)
 		print self.nsId
+
+	def __getTotalCost(self):
+		"""
+	Return total cost of sale
+		"""
+		costPerUnit = float(s.removeSpaces(self.iterText('Cost')))
+		quantity = float(s.removeSpaces(s.removeMinus(s.removeCommas(\
+			(self.iterText('Quantity'))))))
+		return str(round(costPerUnit*quantity,2))
 
 class SalesOrder(CSVCreator):
 	"""
@@ -573,7 +588,6 @@ class SalesOrder(CSVCreator):
 				'Price',True,textIn))))
 			if not sales:
 				self.total -= price
-
 
 	def getEntries(self):
 		"""

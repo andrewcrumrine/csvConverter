@@ -28,6 +28,8 @@ def addWC(strIn,wcPos,wc):
 	This function replaces a string with a wildcard with the incoming
 	positions listed.
 	"""
+	if type(wcPos) == int:
+		wcPos = [wcPos]
 	for pos in wcPos:
 		strIn = strIn[:pos] + wc + strIn[pos+1:]
 	return strIn
