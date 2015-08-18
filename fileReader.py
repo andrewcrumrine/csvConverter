@@ -23,7 +23,7 @@ class TxtFileReader():
 	This initializes the TxtFileReader object.  It stops the program if a
 	file cannot be opened.
 		"""
-		self.header = True
+		self.header = False
 		self.reading = True
 		self.buffer = None
 		self.fid = None
@@ -140,13 +140,13 @@ class TxtBuffer():
 			return True
 		return False
 
-	def getText(self):
+	def getText(self,clip = 2):
 		"""
 	This method returns the instance text variable.  It's called if the text
 	passes all of the tests.  It intentionally removes the last two characters
 	to prevent extra new line characters from being passed to the csv.
 		"""
-		return self.text[:-2]
+		return self.text[:-clip]
 
 class MapReader(object):
 	def __init__(self,fileIn):

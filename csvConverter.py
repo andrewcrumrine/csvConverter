@@ -19,7 +19,7 @@ class CSVCreator(object):
 	the data into the required fields.
 	"""
 
-	def __init__(self,filenameIn=None,useSalesOrder = False):
+	def __init__(self,filenameIn=None,useSalesOrder = False,useMap = False):
 		"""
 	This initializes the CSVCreator object.  It sets the header titles,
 	defines the locations on a given line where the specific fields are,
@@ -39,9 +39,12 @@ class CSVCreator(object):
 		self.fid = None
 		self.Cfid = None
 		self.useSalesOrder = useSalesOrder
+		self.useMap = useMap
 		self.total = 0
+		self.date = ''
 		self.writeTotal = False
 		self.printCustomer = True
+		self.tranID = None
 
 		self.defaults = {'Undeposited Funds':"True", "Subsidiary": "7",\
 			"Location":"3", "Payment Method":"Cash","Tax Code":"-8",\
@@ -60,11 +63,17 @@ class CSVCreator(object):
 		self.indices = {'Customer ID':[0,8], 'Customer Name':[14,40], \
 			'Item ID':[44,60], 'Item Description':[60,86], 'Date':\
 			[101,110], 'Quantity':[110,135], 'Rate':[160,171],\
-			'Price':[171,185]}
+			'Price':[171,185], 'Cost': [136,146]}
 		if type(self) == CSVCreator:
+			if useMap:
+				self.salesMap = None
+				self.header = ['NetSuite ID'] + self.header
+				self.nsId = None
+				self.salesTotal = 0
 			self.salesOrder = None
 			self.__populateMaps()
 			self.__createCSV()
+
 
 
 	def __del__(self):
@@ -148,19 +157,27 @@ class CSVCreator(object):
 		self.postingMap = f.MapReader('postingMap.txt').getMap()
 		
 
-	def writeToCSV(self,textIn):
+	def writeToCSV(self,textIn,salesMap = None):
 		"""
 	This is the only public method in the class.  It accepts an incoming string
 	and wraps around the setText and setEntry method.  It passes the incoming
 	string to the setText method.		
 		"""
+		if salesMap is not None:
+			self.salesMap = salesMap
+
 		if self.useSalesOrder:
 			self.__setSwitchedText(textIn)
 			self.__setText(textIn)
 			if self.__hasCustomer() and self.salesOrder is None:
 				self.__createSalesOrder(textIn)
 			elif self.__hasCustomer() and self.salesOrder is not None:
+				self.customerID = self.salesOrder.getCustomer()
+				self.salesTotal = self.salesOrder.getTotal(True)
 				self.total = self.salesOrder.getTotal()
+				self.date = self.salesOrder.getDate()
+				if self.useMap:
+					self.__getNSId()
 				self.__writeFromSalesOrder()
 				self.__createSalesOrder(textIn)
 			elif not self.__hasCustomer():
@@ -251,7 +268,9 @@ class CSVCreator(object):
 	pulled from the header list, finds the data from the text variable and
 	writes to the csv.
 		"""
-		if field == 'Customer ID':
+		if field == 'NetSuite ID':
+			fieldVal = self.nsId
+		elif field == 'Customer ID':
 			if self.printCustomer:
 				fieldVal = self.customerID
 			else:
@@ -297,7 +316,7 @@ class CSVCreator(object):
 			fieldVal = self.__getUnits()
 		elif field == 'Transaction Date':
 			if self.printCustomer:
-				fieldVal = self.iterText('Date')
+				fieldVal = self.date
 			else:
 				fieldVal = ''
 
@@ -477,6 +496,15 @@ class CSVCreator(object):
 		year = s.subStrByChar(date_w_no_month+'*','/','*')
 		return self.__getPostingPeriod(month + '/' + year)
 
+	def __getNSId(self):
+		"""
+	Read map to extract NetSuite Id
+		"""
+		date = self.date
+		date = date[:date.rfind('/')+1] + '20' + date[date.rfind('/')+1:]
+		self.nsId = self.salesMap.getID(self.customerID,date,self.salesTotal)
+		print self.nsId
+
 class SalesOrder(CSVCreator):
 	"""
 	Builds a sales order from a series of itemized lines inputed from the 
@@ -489,33 +517,62 @@ class SalesOrder(CSVCreator):
 		CSVCreator.__init__(self)
 		self.entries = [textIn]
 		self.total = 0
+		self.salesTotal = 0
 		self.addToTotal(textIn)
+		self.addToTotal(textIn,True)
 		self.credits = []
+		self.date = s.removeSpaces(self.iterText('Date',True,textIn))
+		self.customer = s.removeSpaces(self.iterText('Customer ID',True,\
+			textIn))
 
 	def addEntry(self, textIn):
 		"""
 	Inputs text from the CSV Creator to the text list
 		"""
 		self.addToTotal(textIn)
+		self.addToTotal(textIn,sales=True)
 		self.entries.append(textIn)
 
-	def getTotal(self):
+	def getTotal(self,sales=False):
 		"""
 	Returns total calculated price for the sales order in a string
 		"""
-		return str(round(self.total,2))
+		if sales:
+			total = str(round(self.salesTotal,2))
+		else:
+			total = str(round(self.total,2))
+		if len(total[total.rfind('.') + 1:]) < 2:
+			total = total + '0'
+		return total
 
-	def addToTotal(self,textIn):
+	def getDate(self):
+		"""
+	Return the date associated with the sales order.
+		"""
+		return self.date
+
+	def getCustomer(self):
+		"""
+	Return the Customer associated with the sales order
+		"""
+		return self.customer
+
+	def addToTotal(self,textIn,sales=False):
 		"""
 	Returns the added price to the total
 		"""
 		if not self.isCredit(textIn):
 			price = float(s.removeCommas(self.iterText('Price',True,textIn)))
 			self.total += price
+			if sales:
+				self.salesTotal += price
+			else:
+				self.total += price
 		else:
 			price = float(s.removeCommas(s.removeMinus(self.iterText(\
 				'Price',True,textIn))))
-			self.total -= price
+			if not sales:
+				self.total -= price
 
 
 	def getEntries(self):
