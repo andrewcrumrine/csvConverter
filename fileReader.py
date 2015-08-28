@@ -18,15 +18,18 @@ class TxtFileReader():
 	object, destroying it and moving on to the next line.  The object also
 	manages when the read text is in the header.
 	"""
-	def __init__(self, filenameIn):
+	def __init__(self, filenameIn, *headers):
 		"""
 	This initializes the TxtFileReader object.  It stops the program if a
 	file cannot be opened.
 		"""
+		self.headers = None
 		self.header = False
 		self.reading = True
 		self.buffer = None
 		self.fid = None
+		if len(headers) != 0:
+			self.headers = headers
 		try:
 			self.fid = open(filenameIn,'r')
 		except IOError:
@@ -45,9 +48,11 @@ class TxtFileReader():
 	This method creates a new TxtBuffer object.  It tells the program when
 	There is no more text to be read.
 		"""
-		self.buffer = TxtBuffer(self.fid)
+		if self.headers is not None:
+			self.buffer = TxtBuffer(self.fid,self.headers[0],self.headers[1])
+		else:
+			self.buffer = TxtBuffer(self.fid)
 		self.__setReading()
-		self.__updateHeader()
 		if self.buffer.returnLine and self.header == False:
 			return self.buffer
 		return None
@@ -78,13 +83,17 @@ class TxtBuffer():
 	lines and blank lines.
 	"""
 
-	def __init__(self,fid):
+	def __init__(self,fid,*headers):
 		"""
 	This initializes instance variables such as keys, the size of the 
 	string and the content read from the TxtFileReader() object
 		"""
-		self.HEADER_KEY_START = ' */**/15'
-		self.HEADER_KEY_STOP = '------'
+
+		self.HEADER_KEY_START = '@#!$'
+		self.HEADER_KEY_STOP = '@!$%$!'
+		if len(headers) != 0:
+			self.HEADER_KEY_START = headers[0]
+			self.HEADER_KEY_STOP = headers[1]
 		self.TOTAL_KEY_1 = '*\r\r\n'
 		self.TOTAL_KEY_2 = '*\r\n'
 		self.TOTAL_KEY_3 = '*\n'
@@ -116,7 +125,8 @@ class TxtBuffer():
 		if self.__isSpecialLine(self.HEADER_KEY_START,0,'*') :
 			self.header = True
 			return True
-		if self.__isSpecialLine(self.HEADER_KEY_STOP,0) :
+		if self.__isSpecialLine(self.HEADER_KEY_STOP,\
+			len(self.text) - len(self.HEADER_KEY_STOP)) :
 			self.header = False
 			return True
 		return False
