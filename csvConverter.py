@@ -55,12 +55,13 @@ class CSVCreator(object):
 
 		self.header = ['Undeposited Funds', 'Posting Period', 'Customer',\
 		'Subsidiary','Location','Payment Method','Transaction Date','Item',\
-		'Quantity','Rate','Tax Code','Units','Price Level','Sales Total']
+		'Quantity','Rate','Tax Code','Units','Price Level','Sales Total',\
+		'Invoice']
 
 		self.indices = {'Customer ID':[0,8], 'Customer Name':[14,40], \
 			'Item ID':[44,60], 'Item Description':[60,86], 'Date':\
 			[101,110], 'Quantity':[110,135], 'Rate':[160,171],\
-			'Price':[171,185]}
+			'Price':[171,185],'Invoice':[94,101]}
 		if type(self) == CSVCreator:
 			self.salesOrder = None
 			self.__populateMaps()
