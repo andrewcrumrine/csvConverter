@@ -71,6 +71,7 @@ class TxtFileReader():
 		if self.buffer.text == '':
 			self.reading = False
 
+
 class TxtBuffer():
 	"""
 	This class screens the string produced by the readline method
