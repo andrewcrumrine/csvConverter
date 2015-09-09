@@ -25,7 +25,7 @@ print files.files
 totalSize = 0
 
 while not files.isEmpty():
-	nextFile = files.getNextFile()
+	nextFile = files.getNextFile(True)
 
 	csvOut = CSVCreator(nextFile,True)
 	inFile = TxtFileReader(nextFile)
@@ -39,5 +39,9 @@ while not files.isEmpty():
 	size = os.path.getsize(csvOut.fileOut)
 	totalSize += size
 	print "Wrote " + str(size) + " bytes to " + csvOut.fileOut + "."
+
+csvFiles = FileList(PATH,path='',csv=True)
+while len(csvFiles.files) > 0:
+	
 print "Program finished writing to csv."
 print "Wrote " + str(totalSize) + " bytes total to csvs."

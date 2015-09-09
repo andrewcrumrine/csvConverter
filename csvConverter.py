@@ -45,7 +45,7 @@ class CSVCreator(object):
 
 		self.defaults = {'Undeposited Funds':"True", "Subsidiary": "7",\
 			"Location":"3", "Payment Method":"Cash","Tax Code":"-8",\
-			"Price Level":"-1"}
+			"Price Level":"-1",'Cost Estimate':"Custom"}
 
 		self.customerMap = {}
 		self.itemMap = {}
@@ -56,12 +56,12 @@ class CSVCreator(object):
 		self.header = ['Undeposited Funds', 'Posting Period', 'Customer',\
 		'Subsidiary','Location','Payment Method','Transaction Date','Item',\
 		'Quantity','Rate','Tax Code','Units','Price Level','Sales Total',\
-		'Invoice']
+		'Cost Estimate','Cost','Invoice']
 
 		self.indices = {'Customer ID':[0,8], 'Customer Name':[14,40], \
 			'Item ID':[44,60], 'Item Description':[60,86], 'Date':\
 			[101,110], 'Quantity':[110,135], 'Rate':[160,171],\
-			'Price':[171,185],'Invoice':[94,101]}
+			'Price':[171,185],'Invoice':[94,101],'Cost':[147,160]}
 		if type(self) == CSVCreator:
 			self.salesOrder = None
 			self.__populateMaps()
@@ -277,13 +277,14 @@ class CSVCreator(object):
 				fieldVal = 'Sale'
 
 		elif field == 'Undeposited Funds' or field == 'Subsidiary' or \
-		field == 'Location'	or field == 'Payment Method':
+		field == 'Location'	or field == 'Payment Method' :
 			if self.printCustomer:
 				fieldVal = self.defaults[field]
 			else:
 				fieldVal = ''
 
-		elif field == 'Tax Code' or field == 'Price Level':
+		elif field == 'Tax Code' or field == 'Price Level' or \
+		field == 'Cost Estimate':
 			fieldVal = self.defaults[field]
 
 		elif field == 'Customer':
@@ -305,6 +306,11 @@ class CSVCreator(object):
 		elif field == 'Posting Period':
 			if self.printCustomer:
 				fieldVal = self.__convertDateToPostingPeriod()
+			else:
+				fieldVal = ''
+		elif field == 'Invoice':
+			if self.printCustomer:
+				fieldVal = self.iterText('Invoice')
 			else:
 				fieldVal = ''
 
