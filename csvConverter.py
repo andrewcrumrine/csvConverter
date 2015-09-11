@@ -308,11 +308,11 @@ class CSVCreator(object):
 				fieldVal = self.__convertDateToPostingPeriod()
 			else:
 				fieldVal = ''
-		elif field == 'Invoice':
-			if self.printCustomer:
-				fieldVal = self.iterText('Invoice')
-			else:
-				fieldVal = ''
+		# elif field == 'Invoice':
+		# 	if self.printCustomer:
+		# 		fieldVal = self.iterText('Invoice')
+		# 	else:
+		# 		fieldVal = ''
 
 
 		else:

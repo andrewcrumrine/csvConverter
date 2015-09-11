@@ -40,8 +40,10 @@ while not files.isEmpty():
 	totalSize += size
 	print "Wrote " + str(size) + " bytes to " + csvOut.fileOut + "."
 
-csvFiles = FileList(PATH,path='',csv=True)
+csvFiles = FileList(PATH,csv=True)
+csvOut = FileMerge(csvFiles.getNextFile(True))
 while len(csvFiles.files) > 0:
-	
+	csvOut._setFileIn(csvFiles.getNextFile(True))
+	csvOut._translateCSV()
 print "Program finished writing to csv."
 print "Wrote " + str(totalSize) + " bytes total to csvs."

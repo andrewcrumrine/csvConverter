@@ -59,3 +59,38 @@ class FileList():
 		if f_str[:6] != 'Credit':
 			return True
 		return False
+
+class FileMerge():
+	def __init__(self,fileIn):
+		self.fileout = 'out.csv'
+		self.fid = None
+		self._setFileIn(fileIn)
+		try:
+			self.fid = open(self.fileout,'w')
+		except IOError:
+			print("Cannot open write file")
+			raise SystemExit
+		self._translateCSV(True)
+
+
+	def __del__(self):
+		if self.fid is not None:
+			self.fid.close()
+		if self.fileIn is not None:
+			self.fileIn.close()
+
+	def _setFileIn(self,fileIn):
+		try:
+			self.fileIn = open(fileIn,'r')
+		except IOError:
+			print("File does not exist.")
+			raise SystemExit		
+
+	def _translateCSV(self,header=False):
+		if header:
+			readLine = None
+		else:
+			readLine = self.fileIn.readline()
+		while readLine != '':
+			readLine = self.fileIn.readline()
+			self.fid.write(readLine)
