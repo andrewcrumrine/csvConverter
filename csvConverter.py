@@ -31,6 +31,7 @@ class CSVCreator(object):
 		self.customer = ''
 		self.itemID = ''
 		self.item = ''
+		self.p_inv = ''
 		self.rate = 0
 		self.fileIn = filenameIn
 		self.fileOut = None
@@ -51,12 +52,13 @@ class CSVCreator(object):
 		self.itemMap = {}
 		self.unitsMap = {}
 		self.postingMap = {}
+		self.invoiceMap = {}
 
 
 		self.header = ['Undeposited Funds', 'Posting Period', 'Customer',\
 		'Subsidiary','Location','Payment Method','Transaction Date','Item',\
 		'Quantity','Rate','Tax Code','Units','Price Level','Sales Total',\
-		'Cost Estimate','Cost','Invoice']
+		'Cost Estimate','Cost','Invoice','Inv Open','Parent Inv']
 
 		self.indices = {'Customer ID':[0,8], 'Customer Name':[14,40], \
 			'Item ID':[44,60], 'Item Description':[60,86], 'Date':\
@@ -147,6 +149,7 @@ class CSVCreator(object):
 		self.itemMap = f.MapReader('itemMap.txt').getMap()
 		self.unitMap = f.MapReader('unitMap.txt').getMap()
 		self.postingMap = f.MapReader('postingMap.txt').getMap()
+		self.invoiceMap = f.MapReader('invoiceMap.txt').getMap()
 		
 
 	def writeToCSV(self,textIn):
@@ -162,6 +165,7 @@ class CSVCreator(object):
 				self.__createSalesOrder(textIn)
 			elif self.__hasCustomer() and self.salesOrder is not None:
 				self.total = self.salesOrder.getTotal()
+				self.p_inv = self.salesOrder.invoice
 				self.__writeFromSalesOrder()
 				self.__createSalesOrder(textIn)
 			elif not self.__hasCustomer():
@@ -308,7 +312,17 @@ class CSVCreator(object):
 				fieldVal = self.__convertDateToPostingPeriod()
 			else:
 				fieldVal = ''
-		# elif field == 'Invoice':
+
+		elif field == 'Inv Open':
+			invoice = self.iterText('Invoice')
+			if self.__hasInvoice(invoice):
+				fieldVal = 'True'
+			else:
+				fieldVal = ''
+
+		elif field == 'Parent Inv':
+			fieldVal = self.p_inv
+		#elif field == 'Invoice':
 		# 	if self.printCustomer:
 		# 		fieldVal = self.iterText('Invoice')
 		# 	else:
@@ -398,6 +412,7 @@ class CSVCreator(object):
 			self.item = self.iterText('Item Description')
 		pass
 
+
 	def isCredit(self,textIn=None):
 		"""
 	This method checks the quantity field to make sure the transaction is
@@ -461,6 +476,16 @@ class CSVCreator(object):
 		item = s.removeSpaces(self.itemID)
 		return self.itemMap[item]
 
+	def __hasInvoice(self,invoice):
+		"""
+	Returns boolean if invoice appears in Invoice Map
+		"""
+		invoice = s.removeSpaces(invoice)
+		if self.invoiceMap.has_key(invoice):
+			return True
+		else:
+			return False
+
 	def __getUnits(self):
 		"""
 	Returns sale unit type
@@ -498,6 +523,7 @@ class SalesOrder(CSVCreator):
 		self.total = 0
 		self.addToTotal(textIn)
 		self.credits = []
+		self.invoice = ''
 
 	def addEntry(self, textIn):
 		"""
@@ -517,9 +543,10 @@ class SalesOrder(CSVCreator):
 	Returns the added price to the total
 		"""
 		if not self.isCredit(textIn):
+			self.__setInvoice(textIn)
 			price = float(s.removeCommas(self.iterText('Price',True,textIn)))
 			self.total += price
-		else:
+		else:	
 			price = float(s.removeCommas(s.removeMinus(self.iterText(\
 				'Price',True,textIn))))
 			self.total -= price
@@ -554,3 +581,9 @@ class SalesOrder(CSVCreator):
 		"""
 		for credit in self.credits:
 			self.entries.remove(credit)
+
+	def __setInvoice(self,textIn):
+		"""
+	Sets invoice
+		"""
+		self.invoice = s.removeSpaces(self.iterText('Invoice',True,textIn))
