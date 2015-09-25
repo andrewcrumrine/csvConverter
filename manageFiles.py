@@ -5,10 +5,12 @@
 import os
 
 class FileList():
-	def __init__(self,path='',csv=False):
+	def __init__(self,path='',csv=False,credit=False):
 		self.path = path
-		if csv:
+		if csv and not credit:
 			self.files = self.__generateCSVList()
+		elif csv and credit:
+			self.files = self.__generateCreditList()
 		else:
 			self.files = self.__generateList()
 
@@ -30,7 +32,17 @@ class FileList():
 			if self.__isCSVFile(f) and self.__isNotCredit(f):
 				csvFiles.append(self.path + '/' + f)
 		os.chdir('..')
-		return csvFiles		
+		return csvFiles
+
+	def __generateCreditList(self):
+		os.chdir(self.path)
+		csvFiles = []
+		files = os.listdir(os.curdir)
+		for f in files:
+			if self.__isCSVFile(f) and not self.__isNotCredit(f):
+				csvFiles.append(self.path + '/' + f)
+		os.chdir('..')
+		return csvFiles				
 
 	def __isTxtFile(self,f_str):
 		if f_str[-4:] == '.txt':
@@ -61,8 +73,11 @@ class FileList():
 		return False
 
 class FileMerge():
-	def __init__(self,fileIn):
-		self.fileout = 'out.csv'
+	def __init__(self,fileIn,fileOut=None):
+		if fileOut is None:
+			self.fileout = 'out.csv'
+		else:
+			self.fileout = fileOut
 		self.fid = None
 		self._setFileIn(fileIn)
 		try:

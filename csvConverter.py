@@ -333,6 +333,8 @@ class CSVCreator(object):
 			fieldVal = self.iterText(field)
 		fieldVal = s.removeSpaces(fieldVal)
 		fieldVal = s.removeCommas(fieldVal)
+		if field == 'Quantity' or 'Cost':
+			fieldVal = s.removeMinus(fieldVal)
 		if fid is None:
 			fid = self.fid
 		fid.write(fieldVal)
